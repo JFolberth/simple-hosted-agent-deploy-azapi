@@ -17,7 +17,7 @@ variable "display_name" {
 }
 
 variable "foundry_user_role_definition_id" {
-  description = "Role definition GUID for Azure AI Foundry User."
+  description = "Role definition GUID for Foundry User."
   type        = string
   nullable    = false
 }

@@ -3,6 +3,7 @@ data "azapi_client_config" "current" {}
 locals {
   effective_subscription_id                             = coalesce(var.subscription_id, data.azapi_client_config.current.subscription_id)
   acr_pull_role_definition_resource_id                  = "/subscriptions/${local.effective_subscription_id}/providers/Microsoft.Authorization/roleDefinitions/${var.acr_pull_role_definition_id}"
+  foundry_user_role_definition_resource_id              = "/subscriptions/${local.effective_subscription_id}/providers/Microsoft.Authorization/roleDefinitions/${var.foundry_user_role_definition_id}"
   log_analytics_data_reader_role_definition_resource_id = "/subscriptions/${local.effective_subscription_id}/providers/Microsoft.Authorization/roleDefinitions/${var.log_analytics_data_reader_role_definition_id}"
 
   common_tags = merge(
@@ -10,7 +11,7 @@ locals {
       Environment = var.environment
       ManagedBy   = "terraform"
       Pattern     = "foundry-basic-runtime"
-      Project     = "ProjectChopped"
+      Project     = "azapiAgentDeploy"
       StackName   = var.stack_name
     },
     var.tags,
@@ -91,6 +92,29 @@ module "foundry_project" {
   tags                            = local.common_tags
 }
 
+# Grants the Terraform caller the project-scoped data actions needed to manage hosted agents.
+resource "azapi_resource" "deployer_foundry_user_role" {
+  type      = "Microsoft.Authorization/roleAssignments@2022-04-01"
+  name      = uuidv5("url", "${module.foundry_project.id}/${data.azapi_client_config.current.object_id}/${var.foundry_user_role_definition_id}")
+  parent_id = module.foundry_project.id
+
+  body = {
+    properties = {
+      principalId      = data.azapi_client_config.current.object_id
+      roleDefinitionId = local.foundry_user_role_definition_resource_id
+    }
+  }
+}
+
+# Foundry data-plane authorization can lag behind ARM role-assignment completion.
+resource "time_sleep" "deployer_foundry_user_role_propagation" {
+  create_duration = "90s"
+
+  triggers = {
+    role_assignment_id = azapi_resource.deployer_foundry_user_role.id
+  }
+}
+
 module "image_registry" {
   source = "./modules/image_registry"
 
@@ -100,6 +124,19 @@ module "image_registry" {
   sku_name            = "Standard"
   subscription_id     = local.effective_subscription_id
   tags                = local.common_tags
+}
+
+module "image_build" {
+  source = "./modules/image_build"
+
+  build_context_path    = "${path.root}/../src"
+  image_repository_name = var.image_repository_name
+  image_tag             = var.image_tag
+  registry_id           = module.image_registry.id
+  registry_login_server = module.image_registry.login_server
+  registry_name         = module.image_registry.name
+  resource_group_name   = azapi_resource.resource_group.name
+  subscription_id       = local.effective_subscription_id
 }
 
 # Lets the project identity pull hosted-agent images without enabling registry admin credentials.
@@ -175,11 +212,11 @@ module "hosted_agent" {
 
   agent_name            = var.agent_name
   environment_variables = var.environment_variables
-  image_uri             = "${module.image_registry.login_server}/${var.image_repository_name}:${var.image_tag}"
+  image_uri             = module.image_build.image_uri
   model_deployment_name = module.foundry_account.primary_deployment_name
   project_endpoint      = module.foundry_project.project_endpoint
   rai_policy_id         = module.foundry_account.rai_policy_id
 
-  # ACR pull authorization is an operational prerequisite not represented in the agent request body.
-  depends_on = [azapi_resource.project_acr_pull_role]
+  # Image availability, ACR pull authorization, and caller data-plane access are external prerequisites.
+  depends_on = [azapi_resource.project_acr_pull_role, module.image_build, time_sleep.deployer_foundry_user_role_propagation]
 }

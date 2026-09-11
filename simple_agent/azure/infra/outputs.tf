@@ -33,6 +33,11 @@ output "application_insights_id" {
   value       = module.application_insights.id
 }
 
+output "container_image_uri" {
+  description = "Fully qualified URI of the image built and pushed to ACR."
+  value       = module.image_build.image_uri
+}
+
 output "foundry_account_endpoint" {
   description = "Endpoint URL of the Foundry account."
   value       = module.foundry_account.endpoint

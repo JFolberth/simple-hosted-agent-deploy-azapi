@@ -2,7 +2,7 @@ agent_name     = "BasicAgent"
 azure_location = "eastus2"
 environment    = "dev"
 image_tag      = "replace-at-deploy-time"
-stack_name     = "projectchopped"
+stack_name     = "azapi-agent-deploy"
 
 foundry_deployments = [
   {
@@ -18,7 +18,7 @@ foundry_deployments = [
 foundry_rai_policy = {
   base_policy_name = "Microsoft.Default"
   mode             = "Blocking"
-  name             = "projectchopped-content-safety"
+  name             = "azapi-agent-deploy-content-safety"
   content_filters = [
     { name = "Hate", source = "Prompt", enabled = true, blocking = true, severity_threshold = "Medium" },
     { name = "Hate", source = "Completion", enabled = true, blocking = true, severity_threshold = "Medium" },

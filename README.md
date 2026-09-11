@@ -51,13 +51,19 @@ The deployment identity needs permission to create the resources and role assign
 The container does not mount host Azure credentials; authenticate again after rebuilding.
 
 ```bash
-./simple_agent/azure/deploy/deploy.sh --env dev
+terraform -chdir=simple_agent/azure/infra init
+terraform -chdir=simple_agent/azure/infra plan \
+  -var-file=environments/dev.tfvars \
+  -var="image_tag=<git-sha>"
+terraform -chdir=simple_agent/azure/infra apply \
+  -var-file=environments/dev.tfvars \
+  -var="image_tag=<git-sha>"
 ```
 
-On first use the script prompts to bootstrap ACR, builds and pushes the image,
-then prompts to apply the full Terraform plan. Subsequent runs reuse the registry.
-Image tags are Git-derived and `latest` is rejected; registry-level tag immutability
-is not enforced. Review each plan: deployment creates billable Azure resources.
+Terraform creates ACR, uploads the local application source to an ACR quick build,
+and waits for the `linux/amd64` image to be pushed before it creates the hosted
+agent. Use an immutable image tag; `latest` is rejected, but registry-level tag
+immutability is not enforced. Review each plan: deployment creates billable Azure resources.
 A successful apply is not an invocation smoke test; verify the hosted agent in
 Foundry before relying on it.
 
@@ -89,7 +95,6 @@ configuration, and no additional Azure MCP extension is required by these agents
 terraform -chdir=simple_agent/azure/infra init -backend=false
 terraform -chdir=simple_agent/azure/infra fmt -check -recursive
 terraform -chdir=simple_agent/azure/infra validate
-bash -n simple_agent/azure/deploy/deploy.sh
 .venv/bin/python -m pip check
 ```
 
@@ -98,13 +103,11 @@ These checks do not deploy resources or prove runtime invocation succeeds.
 ## Files
 
 - [Azure infrastructure](simple_agent/azure/infra/README.md)
-- [Deployment workflow](simple_agent/azure/deploy/README.md)
 - [Azure Expert](.github/agents/azure.agent.md)
 - [Terraform agent](.github/agents/terraform.agent.md)
 - [MCP configuration](.vscode/mcp.json)
 - [Development container](.devcontainer/devcontainer.json)
 
-Extracted from the Azure implementation in
-[Azure-Samples/ProjectChopped](https://github.com/Azure-Samples/ProjectChopped).
+Extracted from an Azure multi-cloud reference implementation.
 Only the Azure implementation and necessary shared deployment helpers are included;
 the research journal, skills, comparison UI, and other cloud implementations are excluded.

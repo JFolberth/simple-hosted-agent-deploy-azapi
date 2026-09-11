@@ -144,7 +144,7 @@ variable "foundry_rai_policy" {
 }
 
 variable "foundry_user_role_definition_id" {
-  description = "Built-in role definition GUID for Azure AI Foundry User."
+  description = "Built-in role definition GUID for Foundry User."
   type        = string
   default     = "53ca6127-db72-4b80-b1b0-d745d6d5456d"
 
@@ -171,8 +171,8 @@ variable "image_tag" {
   nullable    = false
 
   validation {
-    condition     = var.image_tag != "" && var.image_tag != "latest"
-    error_message = "image_tag must be an immutable tag (for example a git SHA). 'latest' is not permitted."
+    condition     = var.image_tag != "latest" && can(regex("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$", var.image_tag))
+    error_message = "image_tag must be a valid immutable Docker tag (for example a git SHA). 'latest' is not permitted."
   }
 }
 

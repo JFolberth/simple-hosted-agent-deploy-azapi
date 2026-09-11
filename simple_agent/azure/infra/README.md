@@ -34,7 +34,8 @@ azure/
 6. Foundry project with system-assigned identity and required role assignments
 7. Required Foundry project connections for Application Insights and ACR
 8. Azure Container Registry
-9. Logical Foundry hosted agent managed through the Foundry v1 data plane
+9. Remote ACR image build from the local application source
+10. Logical Foundry hosted agent managed through the Foundry v1 data plane
 
 ## Usage
 
@@ -43,13 +44,15 @@ terraform -chdir=simple_agent/azure/infra init
 terraform -chdir=simple_agent/azure/infra plan \
   -var-file=environments/dev.tfvars \
   -var="image_tag=<git-sha>"
+terraform -chdir=simple_agent/azure/infra apply \
+  -var-file=environments/dev.tfvars \
+  -var="image_tag=<git-sha>"
 ```
 
-Or use the deploy script:
-
-```bash
-./simple_agent/azure/deploy/deploy.sh
-```
+Applying the plan uploads `simple_agent/azure/src` to an ACR quick build. The
+authenticated Azure CLI identity must be able to queue ACR builds. Terraform
+waits for the `linux/amd64` image build and push to succeed before creating or
+updating the hosted agent.
 
 ## Notes
 
@@ -60,8 +63,10 @@ Or use the deploy script:
 - The logical hosted agent uses AzAPI's `azapi_data_plane_resource` targeting
   `Microsoft.Foundry/agents@v1`. Its project endpoint parent omits the URL
   scheme as required by AzAPI.
-- Terraform manages the current logical-agent definition. Image build and push
-  remain external, and individual historical or draft Foundry versions are not
-  represented as separate Terraform resources.
+- Terraform manages the current logical-agent definition and invokes the ACR
+  image build through `terraform_data`. The image itself is an external build
+  artifact, so deleting it outside Terraform does not automatically recreate it.
+  Individual historical or draft Foundry versions are not represented as
+  separate Terraform resources.
 - `foundry_rai_policy` defines one account-scoped content-filter policy shared by all model deployments. Each deployment references the policy by name, while hosted agents reference its full ARM resource ID separately.
 - The blocking boundary is the RAI policy attached to model deployments and hosted agents. Application Insights evaluations and tracing provide monitoring evidence; they do not block prompts or responses.
