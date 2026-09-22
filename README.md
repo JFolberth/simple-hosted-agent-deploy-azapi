@@ -34,6 +34,10 @@ The application requirements include `agent-framework-core`,
 The post-create script installs them and checks dependency compatibility. Package
 versions follow the existing sample constraints; they are not fully locked.
 Public package sources are used without an internal mirror or preloaded credentials.
+If `PIP_INDEX_URL` and `PIP_TRUSTED_HOST` are set in the shell running `deploy.sh`,
+they are forwarded as `docker build` args and promoted to `ENV` in the application
+[Dockerfile](simple_agent/azure/src/Dockerfile), so a private mirror can be used
+for the image build without changing the Dockerfile.
 
 Only open trusted repositories with host Docker access: that access is highly
 privileged. Image builds target `linux/amd64`; ARM hosts need compatible Docker
@@ -115,6 +119,7 @@ These checks do not deploy resources or prove runtime invocation succeeds.
 ## Files
 
 - [Azure infrastructure](simple_agent/azure/infra/README.md)
+- [Deployment script](simple_agent/azure/deploy/deploy.sh)
 - [Azure Expert](.github/agents/azure.agent.md)
 - [Terraform agent](.github/agents/terraform.agent.md)
 - [MCP configuration](.vscode/mcp.json)

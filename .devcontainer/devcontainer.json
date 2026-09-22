@@ -49,9 +49,5 @@
     }
   },
   "remoteUser": "vscode",
-  "containerEnv": {
-    "PIP_INDEX_URL": "https://packagefeedproxy.microsoft.io/pypi/simple/",
-    "PIP_TRUSTED_HOST": "packagefeedproxy.microsoft.io"
-  },
   "postCreateCommand": "bash .devcontainer/post-create.sh"
 }
