@@ -16,7 +16,7 @@ variable "agent_description" {
 }
 
 variable "agent_name" {
-  description = "Name used for Foundry project and dependent resources."
+  description = "Name used for the Foundry project and the hosted agent deployed against it."
   type        = string
   nullable    = false
 
@@ -57,12 +57,6 @@ variable "environment" {
     condition     = contains(["dev", "staging", "prod"], var.environment)
     error_message = "environment must be one of: dev, staging, prod."
   }
-}
-
-variable "environment_variables" {
-  description = "Additional environment variables intended for the hosted runtime container."
-  type        = map(string)
-  default     = {}
 }
 
 variable "foundry_account_kind" {
@@ -151,28 +145,6 @@ variable "foundry_user_role_definition_id" {
   validation {
     condition     = can(regex("^[0-9a-fA-F-]{36}$", var.foundry_user_role_definition_id))
     error_message = "foundry_user_role_definition_id must be a valid GUID."
-  }
-}
-
-variable "image_repository_name" {
-  description = "Repository name inside ACR used for the hosted image."
-  type        = string
-  default     = "basic-agent"
-
-  validation {
-    condition     = can(regex("^[a-z0-9]+([._-][a-z0-9]+)*$", var.image_repository_name))
-    error_message = "image_repository_name must use lowercase letters, numbers, and separators . _ -."
-  }
-}
-
-variable "image_tag" {
-  description = "Container image tag to deploy. Must be immutable; latest is rejected."
-  type        = string
-  nullable    = false
-
-  validation {
-    condition     = var.image_tag != "latest" && can(regex("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$", var.image_tag))
-    error_message = "image_tag must be a valid immutable Docker tag (for example a git SHA). 'latest' is not permitted."
   }
 }
 

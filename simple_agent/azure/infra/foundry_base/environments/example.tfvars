@@ -1,7 +1,6 @@
 agent_name     = "BasicAgent"
 azure_location = "eastus2"
 environment    = "dev"
-image_tag      = "replace-at-deploy-time"
 stack_name     = "azapi-agent-deploy"
 
 foundry_deployments = [

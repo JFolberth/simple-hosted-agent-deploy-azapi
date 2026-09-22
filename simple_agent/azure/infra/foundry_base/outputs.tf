@@ -4,7 +4,7 @@ output "acr_id" {
 }
 
 output "acr_login_server" {
-  description = "Login server for Azure Container Registry."
+  description = "Login server for the Azure Container Registry."
   value       = module.image_registry.login_server
 }
 
@@ -13,29 +13,20 @@ output "acr_name" {
   value       = module.image_registry.name
 }
 
-output "acr_repository" {
-  description = "Container repository path used for the hosted image."
-  value       = "${module.image_registry.login_server}/${var.image_repository_name}"
-}
-
-output "acr_repository_name" {
-  description = "Container repository name inside ACR."
-  value       = var.image_repository_name
+output "agent_name" {
+  description = "Name shared by the Foundry project and the hosted agent deployed against it."
+  value       = var.agent_name
 }
 
 output "application_insights_connection_string" {
   description = "Application Insights connection string."
   value       = module.application_insights.connection_string
+  sensitive   = true
 }
 
 output "application_insights_id" {
   description = "Resource ID of Application Insights component."
   value       = module.application_insights.id
-}
-
-output "container_image_uri" {
-  description = "Fully qualified URI of the image built and pushed to ACR."
-  value       = module.image_build.image_uri
 }
 
 output "foundry_account_endpoint" {
@@ -46,11 +37,6 @@ output "foundry_account_endpoint" {
 output "foundry_account_id" {
   description = "Resource ID of the Foundry account."
   value       = module.foundry_account.id
-}
-
-output "foundry_hosted_agent_id" {
-  description = "Data-plane resource ID of the logical Foundry hosted agent."
-  value       = module.hosted_agent.id
 }
 
 output "foundry_project_endpoint" {
@@ -75,7 +61,7 @@ output "foundry_rai_policy_id" {
 
 output "model_deployment_name" {
   description = "Model deployment name used for hosted agent versions."
-  value       = var.foundry_deployments[0].name
+  value       = module.foundry_account.primary_deployment_name
 }
 
 output "resource_group_name" {

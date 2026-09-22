@@ -32,4 +32,9 @@ resource "azapi_resource" "connection" {
     "id",
     "name"
   ]
+
+  lifecycle {
+    # The read-back briefly lags the write; ignore it instead of re-applying every plan.
+    ignore_changes = [body.properties.isSharedToAll]
+  }
 }

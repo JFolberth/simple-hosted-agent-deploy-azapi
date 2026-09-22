@@ -4,6 +4,9 @@ WORKDIR /app
 
 ARG PIP_INDEX_URL=""
 ARG PIP_TRUSTED_HOST=""
+# ARGs aren't visible to RUN unless promoted to ENV.
+ENV PIP_INDEX_URL=${PIP_INDEX_URL}
+ENV PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST}
 
 COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt

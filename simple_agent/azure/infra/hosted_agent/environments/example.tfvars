@@ -1,0 +1,7 @@
+acr_login_server      = "replace-at-deploy-time"
+agent_name            = "BasicAgent"
+image_repository_name = "basic-agent"
+image_tag             = "replace-at-deploy-time"
+model_deployment_name = "replace-at-deploy-time"
+project_endpoint      = "https://replace-at-deploy-time"
+rai_policy_id         = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/replace-at-deploy-time/providers/Microsoft.CognitiveServices/accounts/replace-at-deploy-time/raiPolicies/replace-at-deploy-time"
