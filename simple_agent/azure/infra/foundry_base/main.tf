@@ -45,7 +45,7 @@ resource "random_string" "stack_token" {
 }
 
 module "log_analytics" {
-  source = "./modules/log_analytics"
+  source = "../modules/log_analytics"
 
   location            = var.azure_location
   name                = "${var.stack_name}-${var.environment}-${random_string.stack_token.result}-log"
@@ -55,7 +55,7 @@ module "log_analytics" {
 }
 
 module "application_insights" {
-  source = "./modules/application_insights"
+  source = "../modules/application_insights"
 
   location              = var.azure_location
   name                  = "${var.stack_name}-${var.environment}-${random_string.stack_token.result}-appi"
@@ -66,7 +66,7 @@ module "application_insights" {
 }
 
 module "foundry_account" {
-  source = "./modules/foundry_account"
+  source = "../modules/foundry_account"
 
   account_kind        = var.foundry_account_kind
   account_name        = "${var.stack_name}-${var.environment}-${random_string.stack_token.result}-aif"
@@ -80,7 +80,7 @@ module "foundry_account" {
 }
 
 module "foundry_project" {
-  source = "./modules/foundry_project"
+  source = "../modules/foundry_project"
 
   account_id                      = module.foundry_account.id
   description                     = var.agent_description
@@ -116,7 +116,7 @@ resource "time_sleep" "deployer_foundry_user_role_propagation" {
 }
 
 module "image_registry" {
-  source = "./modules/image_registry"
+  source = "../modules/image_registry"
 
   location            = var.azure_location
   name                = "${replace(var.stack_name, "-", "")}${var.environment}${random_string.stack_token.result}cr"
@@ -124,19 +124,6 @@ module "image_registry" {
   sku_name            = "Standard"
   subscription_id     = local.effective_subscription_id
   tags                = local.common_tags
-}
-
-module "image_build" {
-  source = "./modules/image_build"
-
-  build_context_path    = "${path.root}/../src"
-  image_repository_name = var.image_repository_name
-  image_tag             = var.image_tag
-  registry_id           = module.image_registry.id
-  registry_login_server = module.image_registry.login_server
-  registry_name         = module.image_registry.name
-  resource_group_name   = azapi_resource.resource_group.name
-  subscription_id       = local.effective_subscription_id
 }
 
 # Lets the project identity pull hosted-agent images without enabling registry admin credentials.
@@ -170,7 +157,7 @@ resource "azapi_resource" "project_log_analytics_reader_role" {
 }
 
 module "foundry_connection_appinsights" {
-  source = "./modules/foundry_connection"
+  source = "../modules/foundry_connection"
 
   auth_type        = "ApiKey"
   category         = "AppInsights"
@@ -189,7 +176,7 @@ module "foundry_connection_appinsights" {
 }
 
 module "foundry_connection_registry" {
-  source = "./modules/foundry_connection"
+  source = "../modules/foundry_connection"
 
   auth_type       = "ManagedIdentity"
   category        = "ContainerRegistry"
@@ -205,18 +192,4 @@ module "foundry_connection_registry" {
 
   # The project identity authenticates this connection and needs AcrPull before it is usable.
   depends_on = [azapi_resource.project_acr_pull_role]
-}
-
-module "hosted_agent" {
-  source = "./modules/hosted_agent"
-
-  agent_name            = var.agent_name
-  environment_variables = var.environment_variables
-  image_uri             = module.image_build.image_uri
-  model_deployment_name = module.foundry_account.primary_deployment_name
-  project_endpoint      = module.foundry_project.project_endpoint
-  rai_policy_id         = module.foundry_account.rai_policy_id
-
-  # Image availability, ACR pull authorization, and caller data-plane access are external prerequisites.
-  depends_on = [azapi_resource.project_acr_pull_role, module.image_build, time_sleep.deployer_foundry_user_role_propagation]
 }

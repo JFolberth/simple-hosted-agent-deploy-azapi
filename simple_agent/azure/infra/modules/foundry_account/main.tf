@@ -75,6 +75,11 @@ resource "azapi_resource" "rai_policy" {
     }
     tags = var.tags
   }
+
+  lifecycle {
+    # Azure asynchronously appends platform-managed filters (DefenderForAI, Indirect Attack); don't fight that drift.
+    ignore_changes = [body.properties.contentFilters]
+  }
 }
 
 # Provisions each configured model endpoint and binds it to the account's content filtering policy.

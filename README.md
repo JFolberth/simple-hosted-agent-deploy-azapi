@@ -6,12 +6,18 @@ MCP configuration, and an Azure-focused development container.
 
 ## Architecture
 
-Terraform provisions a resource group, Azure Container Registry, Log Analytics,
-Application Insights, a Foundry account and project, model deployment, content
-safety policy, connections, role assignments, and the logical hosted agent.
-The hosted agent uses `azapi_data_plane_resource` with
-`Microsoft.Foundry/agents@v1`. Docker builds and pushes the application image
-outside Terraform; Foundry manages the agent version history.
+Deployment is split into two Terraform stacks with a CLI-driven image build in
+between, orchestrated by
+[simple_agent/azure/deploy/deploy.sh](simple_agent/azure/deploy/deploy.sh):
+
+1. **foundry_base** (Terraform) - resource group, Azure Container Registry,
+   Log Analytics, Application Insights, a Foundry account and project, model
+   deployment, content safety policy, connections, and role assignments.
+2. **image build** (Docker CLI) - builds the application image and pushes it
+   to the ACR created by `foundry_base`.
+3. **hosted_agent** (Terraform) - publishes the logical hosted agent using
+   `azapi_data_plane_resource` with `Microsoft.Foundry/agents@v1`, referencing
+   the image pushed in step 2. Foundry manages the agent version history.
 
 ## Development Container
 
@@ -28,6 +34,10 @@ The application requirements include `agent-framework-core`,
 The post-create script installs them and checks dependency compatibility. Package
 versions follow the existing sample constraints; they are not fully locked.
 Public package sources are used without an internal mirror or preloaded credentials.
+If `PIP_INDEX_URL` and `PIP_TRUSTED_HOST` are set in the shell running `deploy.sh`,
+they are forwarded as `docker build` args and promoted to `ENV` in the application
+[Dockerfile](simple_agent/azure/src/Dockerfile), so a private mirror can be used
+for the image build without changing the Dockerfile.
 
 Only open trusted repositories with host Docker access: that access is highly
 privileged. Image builds target `linux/amd64`; ARM hosts need compatible Docker
@@ -40,36 +50,37 @@ Run from the repository root inside the dev container:
 ```bash
 az login
 az account set --subscription "<your-subscription-id>"
-cp simple_agent/azure/infra/environments/example.tfvars \
-  simple_agent/azure/infra/environments/dev.tfvars
+cp simple_agent/azure/infra/foundry_base/environments/example.tfvars \
+  simple_agent/azure/infra/foundry_base/environments/dev.tfvars
+cp simple_agent/azure/infra/hosted_agent/environments/example.tfvars \
+  simple_agent/azure/infra/hosted_agent/environments/dev.tfvars
 ```
 
-Edit the local environment file for your stack name, region, model deployment,
+Edit the local environment files for your stack name, region, model deployment,
 capacity, and safety policy. The example model and region are sample values;
 verify current availability, quota, and Hosted Agent support in your subscription.
 The deployment identity needs permission to create the resources and role assignments.
 The container does not mount host Azure credentials; authenticate again after rebuilding.
 
 ```bash
-terraform -chdir=simple_agent/azure/infra init
-terraform -chdir=simple_agent/azure/infra plan \
-  -var-file=environments/dev.tfvars \
-  -var="image_tag=<git-sha>"
-terraform -chdir=simple_agent/azure/infra apply \
-  -var-file=environments/dev.tfvars \
-  -var="image_tag=<git-sha>"
+simple_agent/azure/deploy/deploy.sh --environment dev
 ```
 
-Terraform creates ACR, uploads the local application source to an ACR quick build,
-and waits for the `linux/amd64` image to be pushed before it creates the hosted
-agent. Use an immutable image tag; `latest` is rejected, but registry-level tag
-immutability is not enforced. Review each plan: deployment creates billable Azure resources.
+This runs, in order: a `foundry_base` plan/apply, a `docker build` and
+`docker push` to the ACR it created, and a `hosted_agent` plan/apply for the
+pushed image tag. Each Terraform stage prompts for confirmation before
+applying (set `AUTO_APPROVE=1` to skip prompts); the image push prompts
+separately. Pass `--stage base|image|agent` to run a single stage, or `--tag`
+to pin an explicit image tag instead of the computed git SHA. Review every
+plan: deployment creates billable Azure resources. Use an immutable image tag;
+`latest` is rejected, but registry-level tag immutability is not enforced.
 A successful apply is not an invocation smoke test; verify the hosted agent in
 Foundry before relying on it.
 
-Terraform uses local state by default. State and real environment files are
-ignored; use an appropriately secured remote backend for shared deployments.
-Do not put credentials in Terraform files or commit generated state or plans.
+Terraform uses local state by default, one state file per stack. State and
+real environment files are ignored; use an appropriately secured remote
+backend for shared deployments. Do not put credentials in Terraform files or
+commit generated state or plans.
 
 ## Copilot Agents and MCP
 
@@ -92,9 +103,14 @@ configuration, and no additional Azure MCP extension is required by these agents
 ## Validation
 
 ```bash
-terraform -chdir=simple_agent/azure/infra init -backend=false
-terraform -chdir=simple_agent/azure/infra fmt -check -recursive
-terraform -chdir=simple_agent/azure/infra validate
+terraform -chdir=simple_agent/azure/infra/foundry_base init -backend=false
+terraform -chdir=simple_agent/azure/infra/foundry_base fmt -check -recursive
+terraform -chdir=simple_agent/azure/infra/foundry_base validate
+
+terraform -chdir=simple_agent/azure/infra/hosted_agent init -backend=false
+terraform -chdir=simple_agent/azure/infra/hosted_agent fmt -check -recursive
+terraform -chdir=simple_agent/azure/infra/hosted_agent validate
+
 .venv/bin/python -m pip check
 ```
 
@@ -103,6 +119,7 @@ These checks do not deploy resources or prove runtime invocation succeeds.
 ## Files
 
 - [Azure infrastructure](simple_agent/azure/infra/README.md)
+- [Deployment script](simple_agent/azure/deploy/deploy.sh)
 - [Azure Expert](.github/agents/azure.agent.md)
 - [Terraform agent](.github/agents/terraform.agent.md)
 - [MCP configuration](.vscode/mcp.json)
