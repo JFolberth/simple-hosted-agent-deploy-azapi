@@ -9,6 +9,18 @@ variable "agent_name" {
   }
 }
 
+variable "cpu" {
+  description = "CPU cores allocated to the hosted runtime container (for example \"0.25\")."
+  type        = string
+  default     = "0.25"
+  nullable    = false
+
+  validation {
+    condition     = can(regex("^[0-9]+(\\.[0-9]+)?$", var.cpu))
+    error_message = "cpu must be a plain number string, for example 0.25 or 1."
+  }
+}
+
 variable "environment_variables" {
   description = "Environment variables supplied to the hosted runtime container."
   type        = map(string)
@@ -23,6 +35,18 @@ variable "image_uri" {
   validation {
     condition     = trimspace(var.image_uri) != "" && !endswith(var.image_uri, ":latest")
     error_message = "image_uri must specify a non-empty immutable image and must not use the latest tag."
+  }
+}
+
+variable "memory" {
+  description = "Memory allocated to the hosted runtime container (for example \"0.5Gi\")."
+  type        = string
+  default     = "0.5Gi"
+  nullable    = false
+
+  validation {
+    condition     = can(regex("^[0-9]+(\\.[0-9]+)?Gi$", var.memory))
+    error_message = "memory must be a Gi-suffixed number string, for example 0.5Gi or 2Gi."
   }
 }
 

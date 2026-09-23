@@ -12,8 +12,8 @@ resource "azapi_data_plane_resource" "hosted_agent" {
       container_configuration = {
         image = var.image_uri
       }
-      cpu    = "0.25"
-      memory = "0.5Gi"
+      cpu    = var.cpu
+      memory = var.memory
       protocol_versions = [
         {
           # The hosted container must implement this Foundry Responses contract.

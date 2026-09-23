@@ -20,6 +20,18 @@ variable "agent_name" {
   }
 }
 
+variable "cpu" {
+  description = "CPU cores allocated to the hosted runtime container (for example \"0.25\")."
+  type        = string
+  default     = "0.25"
+  nullable    = false
+
+  validation {
+    condition     = can(regex("^[0-9]+(\\.[0-9]+)?$", var.cpu))
+    error_message = "cpu must be a plain number string, for example 0.25 or 1."
+  }
+}
+
 variable "environment_variables" {
   description = "Additional environment variables supplied to the hosted runtime container."
   type        = map(string)
@@ -45,6 +57,18 @@ variable "image_tag" {
   validation {
     condition     = var.image_tag != "latest" && can(regex("^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$", var.image_tag))
     error_message = "image_tag must be a valid immutable Docker tag (for example a git SHA). 'latest' is not permitted."
+  }
+}
+
+variable "memory" {
+  description = "Memory allocated to the hosted runtime container (for example \"0.5Gi\")."
+  type        = string
+  default     = "0.5Gi"
+  nullable    = false
+
+  validation {
+    condition     = can(regex("^[0-9]+(\\.[0-9]+)?Gi$", var.memory))
+    error_message = "memory must be a Gi-suffixed number string, for example 0.5Gi or 2Gi."
   }
 }
 
